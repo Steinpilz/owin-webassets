@@ -1,6 +1,7 @@
 ﻿using Microsoft.Owin;
 using Microsoft.Owin.FileSystems;
 using System;
+using System.Threading.Tasks;
 
 namespace Steinpilz.Owin.WebAssets.ConsoleHost
 {
@@ -23,9 +24,15 @@ namespace Steinpilz.Owin.WebAssets.ConsoleHost
 
     class BaseHrefProcessor : IWebAssetProcessor
     {
-        public WebAsset Process(WebAsset webAsset, IOwinRequest request)
+        public async Task<WebAsset> ProcessAsync(WebAsset webAsset, IOwinRequest request)
         {
-            return webAsset.WithNewContent(webAsset.Content.Replace(new[] { ("{BASE_HREF}", request.PathBase.Value + "/") }));
+            //   return webAsset;
+            var newContent = await webAsset.Content.ReplaceAsync(new[] { ("{BASE_HREF}", request.PathBase.Value + "/") });
+            var bufferedNewContent = await newContent.BufferedAsync();
+
+            return webAsset
+                .WithNewContent(bufferedNewContent)
+                .WithMetadata(webAsset.Metadata.WithContentLength(bufferedNewContent.Buffer().Length));
         }
     }
 }

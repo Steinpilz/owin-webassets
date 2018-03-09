@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace System
 {
@@ -7,7 +8,7 @@ namespace System
     /// Collection of utility methods which operate on streams.
     /// (With C# 3.0, these could well become extension methods on Stream.)
     /// </summary>
-    static class StreamUtil
+    public static class StreamUtil
     {
         const int DefaultBufferSize = 8 * 1024;
 
@@ -22,6 +23,11 @@ namespace System
         public static byte[] ReadFully(Stream input)
         {
             return ReadFully(input, DefaultBufferSize);
+        }
+
+        public static async Task<byte[]> ReadFullyAsync(Stream input)
+        {
+            return await ReadFullyAsync(input, DefaultBufferSize).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -41,6 +47,15 @@ namespace System
                 throw new ArgumentOutOfRangeException("bufferSize");
             }
             return ReadFully(input, new byte[bufferSize]);
+        }
+
+        public static async Task<byte[]> ReadFullyAsync(Stream input, int bufferSize)
+        {
+            if (bufferSize < 1)
+            {
+                throw new ArgumentOutOfRangeException("bufferSize");
+            }
+            return await ReadFullyAsync(input, new byte[bufferSize]).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -85,6 +100,36 @@ namespace System
             }
         }
 
+        public static async Task<byte[]> ReadFullyAsync(Stream input, byte[] buffer)
+        {
+            if (buffer == null)
+            {
+                throw new ArgumentNullException("buffer");
+            }
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
+            if (buffer.Length == 0)
+            {
+                throw new ArgumentException("Buffer has length of 0");
+            }
+            // We could do all our own work here, but using MemoryStream is easier
+            // and likely to be just as efficient.
+            using (MemoryStream tempStream = new MemoryStream())
+            {
+                await CopyAsync(input, tempStream, buffer).ConfigureAwait(false);
+                // No need to copy the buffer if it's the right size
+                if (tempStream.Length == tempStream.GetBuffer().Length)
+                {
+                    return tempStream.GetBuffer();
+                }
+                // Okay, make a copy that's the right size
+                return tempStream.ToArray();
+            }
+        }
+
+
         /// <summary>
         /// Copies all the data from one stream into another.
         /// </summary>
@@ -96,6 +141,11 @@ namespace System
         public static void Copy(Stream input, Stream output)
         {
             Copy(input, output, DefaultBufferSize);
+        }
+
+        public static async Task CopyAsync(Stream input, Stream output)
+        {
+            await CopyAsync(input, output, DefaultBufferSize).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -116,6 +166,15 @@ namespace System
                 throw new ArgumentOutOfRangeException("bufferSize");
             }
             Copy(input, output, new byte[bufferSize]);
+        }
+
+        public static async Task CopyAsync(Stream input, Stream output, int bufferSize)
+        {
+            if (bufferSize < 1)
+            {
+                throw new ArgumentOutOfRangeException("bufferSize");
+            }
+            await CopyAsync(input, output, new byte[bufferSize]).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -156,6 +215,31 @@ namespace System
             }
         }
 
+        public static async Task CopyAsync(Stream input, Stream output, byte[] buffer)
+        {
+            if (buffer == null)
+            {
+                throw new ArgumentNullException("buffer");
+            }
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
+            if (output == null)
+            {
+                throw new ArgumentNullException("output");
+            }
+            if (buffer.Length == 0)
+            {
+                throw new ArgumentException("Buffer has length of 0");
+            }
+            int read;
+            while ((read = await input.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+            {
+                await output.WriteAsync(buffer, 0, read).ConfigureAwait(false);
+            }
+        }
+
         /// <summary>
         /// Reads exactly the given number of bytes from the specified stream.
         /// If the end of the stream is reached before the specified amount
@@ -174,6 +258,11 @@ namespace System
             return ReadExactly(input, new byte[bytesToRead]);
         }
 
+        public static async Task<byte[]> ReadExactlyAsync(Stream input, int bytesToRead)
+        {
+            return await ReadExactlyAsync(input, new byte[bytesToRead]).ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Reads into a buffer, filling it completely.
         /// </summary>
@@ -188,6 +277,11 @@ namespace System
         public static byte[] ReadExactly(Stream input, byte[] buffer)
         {
             return ReadExactly(input, buffer, buffer.Length);
+        }
+
+        public static async Task<byte[]> ReadExactlyAsync(Stream input, byte[] buffer)
+        {
+            return await ReadExactlyAsync(input, buffer, buffer.Length).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -205,6 +299,11 @@ namespace System
         public static byte[] ReadExactly(Stream input, byte[] buffer, int bytesToRead)
         {
             return ReadExactly(input, buffer, 0, bytesToRead);
+        }
+
+        public static async Task<byte[]> ReadExactlyAsync(Stream input, byte[] buffer, int bytesToRead)
+        {
+            return await ReadExactlyAsync(input, buffer, 0, bytesToRead).ConfigureAwait(false);
         }
 
 
@@ -261,6 +360,45 @@ namespace System
             return buffer;
         }
 
+        public static async Task<byte[]> ReadExactlyAsync(Stream input, byte[] buffer, int startIndex, int bytesToRead)
+        {
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
+
+            if (buffer == null)
+            {
+                throw new ArgumentNullException("buffer");
+            }
+
+            if (startIndex < 0 || startIndex >= buffer.Length)
+            {
+                throw new ArgumentOutOfRangeException("startIndex");
+            }
+
+            if (bytesToRead < 1 || startIndex + bytesToRead > buffer.Length)
+            {
+                throw new ArgumentOutOfRangeException("bytesToRead");
+            }
+
+            int index = 0;
+
+            while (index < bytesToRead)
+            {
+                int read = await input.ReadAsync(buffer, startIndex + index, bytesToRead - index).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    throw new EndOfStreamException
+                        (String.Format("End of stream reached with {0} byte{1} left to read.",
+                                       bytesToRead - index,
+                                       bytesToRead - index == 1 ? "s" : ""));
+                }
+                index += read;
+            }
+            return buffer;
+        }
+
         /// <summary>
         /// Creates new memory stream which allows you to read all content
         /// </summary>
@@ -270,6 +408,15 @@ namespace System
         {
             var stream = new MemoryStream();
             stream.Write(content, 0, content.Length);
+            stream.Position = 0;
+
+            return stream;
+        }
+
+        public static async Task<Stream> ToStreamAsync(byte[] content)
+        {
+            var stream = new MemoryStream();
+            await stream.WriteAsync(content, 0, content.Length).ConfigureAwait(false);
             stream.Position = 0;
 
             return stream;

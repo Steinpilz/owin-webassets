@@ -17,11 +17,18 @@ namespace Steinpilz.Owin.WebAssets
             var config = new WebAssetsConfig();
             configuration?.Invoke(config);
 
+            var postProcessor = new List<IWebAssetProcessor>();
+            if(config.CompressionFilter != null)
+            {
+                postProcessor.Add(new WebAssetCompressor(config.CompressionFilter));
+            }
+
             var handler = new Lazy<WebAssetsOwinHandler>(() => new WebAssetsOwinHandler(
                     config.FileSystem,
-                    new WebAssetProcessors(config.WebAssetProcessors),
+                    new WebAssetProcessors(config.WebAssetProcessors.Concat(postProcessor)),
                     new FileExtensionContentTypeProvider(),
-                    config.FallbackAsset
+                    config.FallbackAsset,
+                    config.IsStatic
                     ));
 
             appBuilder.Use(async (context, next) => {
@@ -44,6 +51,19 @@ namespace Steinpilz.Owin.WebAssets
         public IFileSystem FileSystem { get; private set; }
         public List<IWebAssetProcessor> WebAssetProcessors { get; private set; } = new List<IWebAssetProcessor>();
         public string FallbackAsset { get; private set; } = "/index.html";
+        public bool IsStatic { get; private set; } = false;
+        public Func<WebAsset, bool> CompressionFilter { get; private set; }
+
+        public WebAssetsConfig()
+        {
+            CompressionFilter = CompressionDefaults.ShouldCompress;
+        }
+
+        public WebAssetsConfig Compress(Func<WebAsset, bool> compressionFilter)
+        {
+            CompressionFilter = compressionFilter;
+            return this;
+        }
 
         public WebAssetsConfig UseFileSystem(IFileSystem fileSystem)
         {
@@ -60,6 +80,12 @@ namespace Steinpilz.Owin.WebAssets
         public WebAssetsConfig WithFallbackAsset(string fallbackAsset)
         {
             FallbackAsset = fallbackAsset;
+            return this;
+        }
+
+        public WebAssetsConfig WithStatic(bool isStatic)
+        {
+            IsStatic = isStatic;
             return this;
         }
     }
