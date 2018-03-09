@@ -8,7 +8,7 @@ namespace System
     /// Collection of utility methods which operate on streams.
     /// (With C# 3.0, these could well become extension methods on Stream.)
     /// </summary>
-    public static class StreamUtil
+    static class StreamUtil
     {
         const int DefaultBufferSize = 8 * 1024;
 
