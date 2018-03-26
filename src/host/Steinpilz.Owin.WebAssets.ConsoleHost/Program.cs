@@ -1,5 +1,6 @@
 ﻿using Microsoft.Owin;
 using Microsoft.Owin.FileSystems;
+using Steinpilz.Owin.WebAssets.Helpers;
 using System;
 using System.Threading.Tasks;
 
@@ -27,7 +28,9 @@ namespace Steinpilz.Owin.WebAssets.ConsoleHost
         public async Task<WebAsset> ProcessAsync(WebAsset webAsset, IOwinRequest request)
         {
             //   return webAsset;
-            var newContent = await webAsset.Content.ReplaceAsync(new[] { ("{BASE_HREF}", request.PathBase.Value + "/") });
+            var urlHelper = request.UrlHelper();
+
+            var newContent = await webAsset.Content.ReplaceAsync(new[] { ("{BASE_HREF}", urlHelper.ClientBaseHref.WithTailingSlash()) });
             var bufferedNewContent = await newContent.BufferedAsync();
 
             return webAsset
