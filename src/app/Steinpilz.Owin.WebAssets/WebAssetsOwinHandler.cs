@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -81,7 +82,7 @@ namespace Steinpilz.Owin.WebAssets
             if (processedAsset.Metadata.LastModifiedAt != null)
             {
                 context.Response.Headers.Append("Last-Modified",
-                    processedAsset.Metadata.LastModifiedAt.Value.ToUniversalTime().ToString("ddd, dd MMM yyyy HH:mm:ss 'GMT'")
+                    processedAsset.Metadata.LastModifiedAt.Value.ToUniversalTime().ToString("ddd, dd MMM yyyy HH:mm:ss 'GMT'", CultureInfo.InvariantCulture)
                     );
             }
 
