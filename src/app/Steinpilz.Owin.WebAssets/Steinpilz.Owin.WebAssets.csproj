@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net451</TargetFrameworks>
     <Description>Steinpilz.Owin.WebAssets</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Owin" Version="4.0.1" />
