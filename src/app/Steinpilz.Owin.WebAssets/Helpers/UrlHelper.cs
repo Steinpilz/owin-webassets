@@ -63,10 +63,9 @@ namespace Steinpilz.Owin.WebAssets.Helpers
             if (virtualFolder.StartsWith(stripPath, StringComparison.OrdinalIgnoreCase))
                 virtualFolder = virtualFolder.Remove(0, stripPath.Length);
 
-            virtualFolder = virtualFolder.WithLeadingSlash();
-
-            var baseHref = prefix + virtualFolder;
-            baseHref = baseHref.WithLeadingSlash().RemoveTailingSlash();
+            // Properly concat and normalize base href to avoid double slashes, etc.
+            // Do not modify trailing slash to allow any kind of a folder or document (.html) to serve as a href.
+            var baseHref = UriStringExtensions.UrlCombine(prefix, virtualFolder).TrimSlashes().WithLeadingSlash();
 
             this.clientBaseHref = baseHref;
         }
@@ -83,6 +82,9 @@ namespace Steinpilz.Owin.WebAssets.Helpers
 
     public static class UriStringExtensions
     {
+        public static string TrimSlashes(this string path)
+            => path.Trim('/');
+
         public static string RemoveLeadingSlash(this string uri)
             => uri.TrimStart(new[] { '/' });
 
@@ -100,5 +102,8 @@ namespace Steinpilz.Owin.WebAssets.Helpers
 
         public static bool StartsWithSlash(this string uri)
             => uri.StartsWith("/");
+
+        public static string UrlCombine(params string[] urlParts) =>
+            string.Join("/", urlParts.Where(part => !string.IsNullOrWhiteSpace(part)).Select(TrimSlashes));
     }
 }
