@@ -64,7 +64,7 @@ namespace Steinpilz.Owin.WebAssets.Helpers
                 virtualFolder = virtualFolder.Remove(0, stripPath.Length);
 
             // Properly concat and normalize base href to avoid double slashes, etc.
-            // Do not modify trailing slash to allow any kind of a folder or document (.html) to serve as a href.
+            // Do not apply trailing slash to allow any kind of a folder or document (.html) to serve as a href.
             var baseHref = UriStringExtensions.UrlCombine(prefix, virtualFolder).TrimSlashes().WithLeadingSlash();
 
             this.clientBaseHref = baseHref;
